@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import sn.noreyni.common.exception.ApiException;
 import sn.noreyni.common.response.PaginationMeta;
+import sn.noreyni.common.utils.PasswordUtil;
 import sn.noreyni.user.dto.UserCreateDto;
 import sn.noreyni.user.dto.UserDetailsDto;
 import sn.noreyni.user.dto.UserListDto;
@@ -34,6 +35,8 @@ public class UserService {
     @Inject
     UserMapper userMapper;
 
+    @Inject
+    PasswordUtil passwordUtil;
     /**
      * Retrieves a paginated list of users
      *
@@ -161,8 +164,7 @@ public class UserService {
                     // Set audit fields using BaseEntity method
                     user.prePersist();
 
-                    // TODO: Hash password in production
-                    // user.setPassword(passwordEncoder.encode(user.getPassword()));
+                    user.setPassword(passwordUtil.hashPassword(createDto.password()));
 
                     log.debug("user.create.persisting - Persisting user entity, email={}", createDto.email());
 
