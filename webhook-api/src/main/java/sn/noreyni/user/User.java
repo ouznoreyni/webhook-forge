@@ -6,9 +6,16 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.bson.codecs.pojo.annotations.BsonIgnore;
 import org.bson.codecs.pojo.annotations.BsonProperty;
 import sn.noreyni.common.entity.BaseEntity;
 import sn.noreyni.common.enums.UserRole;
+import sn.noreyni.project.Project;
+import sn.noreyni.project.ProjectInvitation;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -38,4 +45,23 @@ public class User extends BaseEntity {
 
     @BsonProperty("active")
     private boolean active = true;
+
+    @BsonProperty("owned_project_ids")
+    private Set<String> ownedProjectIds = new HashSet<>();
+
+    @BsonProperty("member_project_ids")
+    private Set<String> memberProjectIds = new HashSet<>();
+
+    @BsonProperty("invited_project_ids")
+    private Set<String> invitedProjectIds = new HashSet<>();
+
+    // Transient field to populated  when fetched
+    @BsonIgnore
+    private List<Project> projects;
+
+    @BsonIgnore
+    private List<Project> ownedProjects;
+
+    @BsonIgnore
+    private List<ProjectInvitation> projectInvitations;
 }
