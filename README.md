@@ -1,21 +1,37 @@
-## 📬 Webhook Testing & Transformation Tool
+## 📬 Webhook – Modern Webhook Testing & Transformation Platform
 
-**Webhook** is a powerful and developer-friendly platform designed to **receive, inspect, transform, and forward** incoming HTTP webhooks. Each user gets a unique endpoint to test integrations from third-party systems or custom applications. The platform supports **customizable transformations**, **resending to target URLs**, and **real-time inspection** through WebSocket notifications.
+**Webhook** is a flexible, developer-centric platform for **capturing, inspecting, transforming, and forwarding** HTTP webhook requests. It allows users to generate **unique endpoints** for each project, making it ideal for testing and debugging third-party integrations or internal systems.
 
-### ✨ Key Features
+Designed for productivity and observability, Webhook includes built-in support for **real-time monitoring**, **payload transformations**, and **resending mechanisms**—all accessible through an intuitive dashboard with collaboration features.
 
-* 🔗 **Unique Webhook URLs** for each project or user
-* 🛠️ **Payload Transformation Engine** using templating or scripting
-* 📤 **Resend Requests** to custom destinations (manual or auto-forward)
-* 📈 **Real-Time Dashboard** to view incoming requests
-* 🧪 **Test and Debug** webhook integrations easily
-* 👥 **Project & User Management** with collaboration support
-* 🔔 **Live Notifications** via WebSockets
+> 🚧 **Currently in active development.**
+> We’re building and refining features—stay tuned or contribute!
 
-### 💡 Use Cases
+---
 
-* Test third-party webhooks (e.g., Wave, Stripe, GitHub, Jira)
-* Simulate downstream services before they’re available
-* Inspect and debug payloads without deploying your backend
-<!-- * Build automation workflows triggered by external services -->
+### ✨ Features
+
+* 🔗 **Unique URLs per project or user**
+  Create isolated endpoints for every integration or environment.
+* 🛠️ **Payload transformation**
+  Modify incoming webhook data using templates or custom scripts.
+* 📤 **Forwarding engine**
+  Resend requests manually or automatically to downstream systems.
+* 📊 **Live dashboard**
+  Inspect request headers, bodies, and transformations in real time.
+* 👥 **Team collaboration**
+  Invite teammates, manage access, and work together on projects.
+* 🔔 **WebSocket-based notifications**
+  Receive instant alerts when new webhooks arrive.
+* 📁 **Request history & replay**
+  Search, filter, and replay past webhook calls for deeper debugging.
+
+---
+
+### 💡 Common Use Cases
+
+* Debug and inspect webhooks from services like **Wave, Stripe, GitHub, or Jira**
+* Simulate backend APIs during development or testing
+* Build automation workflows triggered by external services
+* Monitor and log webhook activity across environments
 
