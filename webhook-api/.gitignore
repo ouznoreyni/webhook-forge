@@ -43,3 +43,20 @@ nb-configuration.xml
 /.quarkus/cli/plugins/
 # TLS Certificates
 .certs/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Docker logs
+docker/logs/
+
+# Database backups
+docker/backups/
+
+# MongoDB data (if using local volumes)
+docker/data/
+
+# JWT certificates
+src/main/resources/certs/*.pem

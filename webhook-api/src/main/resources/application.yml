@@ -1,2 +1,122 @@
-greeting:
-  message: "hello"
+
+# Default configuration (development profile)
+quarkus:
+  # Application Configuration
+  application:
+    name: webhook-api
+    version: 1.0.0
+
+  # HTTP Configuration
+  http:
+    port: 8080
+    cors:
+      ~: true
+      origins: "*"
+      methods: "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+      headers: "accept,authorization,content-type,x-requested-with"
+      exposed-headers: "Content-Disposition"
+      access-control-max-age: 24H
+
+  # MongoDB Configuration
+  mongodb:
+    connection-string: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DATABASE}?authSource=admin
+    database: ${MONGO_DATABASE}
+    # Connection pool settings
+    max-pool-size: 20
+    min-pool-size: 5
+    max-connection-idle-time: 60s
+    max-connection-life-time: 300s
+
+  # Logging Configuration
+  log:
+    level: INFO
+    category:
+      "sn.noreyni": DEBUG
+      "org.mongodb": INFO
+      "io.quarkus.mongodb": DEBUG
+    console:
+      enable: true
+      format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
+      level: INFO
+    file:
+      enable: false
+
+  # Development Configuration
+  dev:
+    ui:
+      always-include: true
+
+  # OpenAPI/Swagger Configuration
+  swagger-ui:
+    always-include: true
+    path: /swagger-ui
+    title: "Noreyni Webhook Management API"
+    theme: original
+
+  smallrye-openapi:
+    info-title: "Noreyni Webhook Management API"
+    info-version: "1.0.0"
+    info-description: "API de gestion des webhook avec authentification JWT"
+    info-contact-email: "contact@noreyni.sn"
+    info-license-name: "MIT"
+
+  # Security Configuration  
+#  smallrye-jwt:
+#    enabled: true
+#    issuer: ${JWT_ISSUER:https://localhost:8080}
+#    # RSA Keys for JWT
+#    sign:
+#      key-location: ${JWT_PRIVATE_KEY_PATH:./src/main/resources/certs/privateKey.pem}
+#    verify:
+#      key-location: ${JWT_PUBLIC_KEY_PATH:./src/main/resources/certs/publicKey.pem}
+
+# Custom JWT Configuration
+#jwt:
+#  issuer: ${JWT_ISSUER:https://localhost:8080}
+#  access-token:
+#    duration: ${JWT_ACCESS_DURATION:86400} # 24 hours in seconds
+#  refresh-token:
+#    duration: ${JWT_REFRESH_DURATION:604800} # 7 days in seconds
+#  private-key-path: ${JWT_PRIVATE_KEY_PATH:./src/main/resources/certs/privateKey.pem}
+#  public-key-path: ${JWT_PUBLIC_KEY_PATH:./src/main/resources/certs/publicKey.pem}
+
+# MongoDB connection validation
+"%dev":
+  quarkus:
+    mongodb:
+      # Development specific settings
+      services:
+        enabled: false # Use external MongoDB instead of dev services
+      connection-string: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DATABASE}?authSource=admin&connectTimeoutMS=10000&socketTimeoutMS=10000
+    log:
+      category:
+        "sn.noreyni": DEBUG
+        "org.mongodb.driver": DEBUG
+
+# Production Configuration
+"%prod":
+  quarkus:
+    mongodb:
+      connection-string: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DATABASE}?authSource=admin&ssl=true&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false
+      max-pool-size: 50
+      min-pool-size: 10
+    log:
+      level: WARN
+      category:
+        "sn.noreyni": INFO
+        "org.mongodb": WARN
+    http:
+      cors:
+        origins: "https://www.webhook.noreyni.com,https://www.webhook.noreyni.com"
+
+# Test Configuration
+"%test":
+  quarkus:
+    mongodb:
+      # Use test database
+      connection-string: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DATABASE}_test?authSource=admin
+      database: ${MONGO_DATABASE}
+    log:
+      level: ERROR
+      category:
+        "sn.noreyni": DEBUG
