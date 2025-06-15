@@ -255,7 +255,7 @@ public class UserService {
         log.debug("user.update.mapping - Applying updates to user entity, id={}", user.getIdAsString());
 
         // Apply updates using mapper
-        userMapper.updateEntity(user, updateDto);
+        userMapper.updateEntity(updateDto, user);
 
         // Set audit fields using BaseEntity method
        // user.setUpdateAudit(currentUserId);

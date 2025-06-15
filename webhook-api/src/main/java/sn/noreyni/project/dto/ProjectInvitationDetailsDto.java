@@ -1,15 +1,18 @@
 package sn.noreyni.project.dto;
 
 import sn.noreyni.common.enums.InvitationStatus;
+import sn.noreyni.user.dto.UserDetailsDto;
 
 import java.time.LocalDateTime;
 
 public record ProjectInvitationDetailsDto(
         String id,
-        String projectId,
-        String inviterId,
-        String inviteeId,
+        ProjectDetailsDto project,
+        UserDetailsDto inviter,
+        UserDetailsDto invitee,
         LocalDateTime sentAt,
         LocalDateTime expiresAt,
-        InvitationStatus status
+        InvitationStatus status,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {}

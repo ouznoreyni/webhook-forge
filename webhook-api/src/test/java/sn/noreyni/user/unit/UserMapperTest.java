@@ -261,7 +261,7 @@ class UserMapperTest {
             LocalDateTime originalUpdatedAt = sampleUser.getUpdatedAt();
 
             // When
-            userMapper.updateEntity(sampleUser, sampleUpdateDto);
+            userMapper.updateEntity(sampleUpdateDto, sampleUser);
 
             // Then
             assertEquals(sampleUpdateDto.firstName(), sampleUser.getFirstName());
@@ -288,7 +288,7 @@ class UserMapperTest {
             );
 
             // When
-            userMapper.updateEntity(sampleUser, partialUpdate);
+            userMapper.updateEntity(partialUpdate, sampleUser);
 
             // Then
             assertEquals(originalFirstName, sampleUser.getFirstName()); // Unchanged
@@ -305,7 +305,7 @@ class UserMapperTest {
             LocalDateTime originalUpdatedAt = sampleUser.getUpdatedAt();
 
             // When
-            userMapper.updateEntity(sampleUser, null);
+            userMapper.updateEntity( null, sampleUser);
 
             // Then
             assertEquals(originalFirstName, sampleUser.getFirstName());
@@ -316,7 +316,7 @@ class UserMapperTest {
         @DisplayName("Should do nothing when User is null")
         void shouldDoNothingWhenUserIsNull() {
             // When & Then - Should not throw exception
-            assertDoesNotThrow(() -> userMapper.updateEntity(null, sampleUpdateDto));
+            assertDoesNotThrow(() -> userMapper.updateEntity(sampleUpdateDto,null));
         }
 
         @Test
@@ -527,7 +527,7 @@ class UserMapperTest {
             UserUpdateDto updateDto = new UserUpdateDto(
                     "Updated Name", null, null, UserRole.ADMIN
             );
-            userMapper.updateEntity(user, updateDto);
+            userMapper.updateEntity(updateDto, user);
             assertEquals("Updated Name", user.getFirstName());
             assertEquals(UserRole.ADMIN, user.getRole());
         }

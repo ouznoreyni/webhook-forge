@@ -9,6 +9,10 @@ import sn.noreyni.user.dto.UserDetailsDto;
 import sn.noreyni.user.dto.UserListDto;
 import sn.noreyni.user.dto.UserUpdateDto;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * User mapper for converting between entities and DTOs
  * Uses manual mapping for records and ModelMapper for entities
@@ -84,7 +88,15 @@ public class UserMapper {
         }
 
         // ModelMapper works fine for mapping TO regular classes
-        return modelMapper.map(dto, User.class);
+        User user = modelMapper.map(dto, User.class);
+
+        // Set defaults for fields not in DTO
+        user.setActive(true);
+        user.setOwnedProjectIds(new HashSet<>());
+        user.setMemberProjectIds(new HashSet<>());
+        user.setInvitedProjectIds(new HashSet<>());
+
+        return user;
     }
 
     /**
@@ -92,9 +104,9 @@ public class UserMapper {
      * Uses manual mapping to handle null values properly
      *
      * @param user the target user entity to update
-     * @param dto the update DTO with new values
+     * @param dto  the update DTO with new values
      */
-    public void updateEntity(User user, UserUpdateDto dto) {
+    public void updateEntity(UserUpdateDto dto, User user) {
         if (dto == null || user == null) {
             return;
         }
@@ -109,10 +121,10 @@ public class UserMapper {
         if (dto.email() != null) {
             user.setEmail(dto.email());
         }
-
         if (dto.role() != null) {
             user.setRole(dto.role());
         }
+
         // Always update the timestamp using BaseEntity method
         user.preUpdate();
     }
@@ -121,11 +133,43 @@ public class UserMapper {
      * Alternative method for updating entity from update request
      * Provides same functionality as updateEntity for backward compatibility
      *
-     * @param user the target user entity to update
+     * @param user    the target user entity to update
      * @param request the update DTO with new values
      */
     public void updateEntityFromUpdateRequest(User user, UserUpdateDto request) {
-        updateEntity(user, request); // Delegate to main update method
+        updateEntity(request, user); // Delegate to main update method
+    }
+
+    /**
+     * Converts list of User entities to list of UserListDto
+     *
+     * @param users the list of user entities
+     * @return List of UserListDto or null if input is null
+     */
+    public List<UserListDto> toListDtoList(List<User> users) {
+        if (users == null) {
+            return null;
+        }
+
+        return users.stream()
+                .map(this::toListDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Converts list of User entities to list of UserDetailsDto
+     *
+     * @param users the list of user entities
+     * @return List of UserDetailsDto or null if input is null
+     */
+    public List<UserDetailsDto> toDetailsDtoList(List<User> users) {
+        if (users == null) {
+            return null;
+        }
+
+        return users.stream()
+                .map(this::toDetailsDto)
+                .collect(Collectors.toList());
     }
 
     /**

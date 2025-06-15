@@ -99,7 +99,7 @@ class UserMapperIntegrationTest {
         );
 
         LocalDateTime beforeUpdate = user.getUpdatedAt();
-        userMapper.updateEntity(user, updateDto);
+        userMapper.updateEntity(updateDto, user);
 
         assertEquals("Updated Name", user.getFirstName());
         assertEquals(UserRole.ADMIN, user.getRole());
@@ -167,10 +167,10 @@ class UserMapperIntegrationTest {
         String originalPassword = user.getPassword();
         LocalDateTime firstUpdateTime = user.getUpdatedAt();
 
-        userMapper.updateEntity(user, firstUpdate);
+        userMapper.updateEntity(firstUpdate, user);
         LocalDateTime secondUpdateTime = user.getUpdatedAt();
 
-        userMapper.updateEntity(user, secondUpdate);
+        userMapper.updateEntity(secondUpdate, user);
 
         // Then - Verify cumulative updates
         assertEquals("First Update", user.getFirstName()); // From first update
@@ -209,7 +209,7 @@ class UserMapperIntegrationTest {
         String originalEmail = minimalUser.getEmail();
         LocalDateTime originalUpdatedAt = minimalUser.getUpdatedAt();
 
-        userMapper.updateEntity(minimalUser, nullUpdate);
+        userMapper.updateEntity(nullUpdate, minimalUser);
 
         assertEquals(originalEmail, minimalUser.getEmail());
         assertNotEquals(originalUpdatedAt, minimalUser.getUpdatedAt()); // preUpdate() still called
