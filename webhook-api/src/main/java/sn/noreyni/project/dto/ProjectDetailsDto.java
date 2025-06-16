@@ -3,7 +3,7 @@ package sn.noreyni.project.dto;
 import sn.noreyni.common.enums.ProjectStatus;
 import sn.noreyni.common.enums.ProjectType;
 import sn.noreyni.common.enums.Visibility;
-import sn.noreyni.user.dto.UserDetailsDto;
+import sn.noreyni.user.dto.UserListDto;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,12 +16,13 @@ public record ProjectDetailsDto(
         Visibility visibility,
         ProjectType type,
         String avatarUrl,
-        UserDetailsDto owner,
-        List<UserDetailsDto> members,
-        List<UserDetailsDto> invitedUsers,
-        String createdBy,
-        String updatedBy,
+        String ownerId,
+        UserListDto owner,
+        List<UserListDto> members,
+        List<UserListDto> invitedUsers,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
-) {
-}
+        LocalDateTime updatedAt,
+        String createdBy,
+        String updatedBy
+
+) {}

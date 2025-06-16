@@ -1,131 +1,280 @@
 package sn.noreyni.project;
 
 import io.quarkus.mongodb.panache.reactive.ReactivePanacheMongoRepository;
+import io.quarkus.panache.common.Page;
+import io.quarkus.panache.common.Sort;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.bson.types.ObjectId;
 import sn.noreyni.common.enums.ProjectStatus;
 import sn.noreyni.common.enums.ProjectType;
 import sn.noreyni.common.enums.Visibility;
+import sn.noreyni.project.dto.ProjectStats;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
 public class ProjectRepository implements ReactivePanacheMongoRepository<Project> {
 
-    public Uni<Project> findByName(String name) {
-        return find("name", name).firstResult();
-    }
-
+    /**
+     * Check if a project with the given name exists
+     */
     public Uni<Boolean> existsByName(String name) {
         return find("name", name).count()
                 .map(count -> count > 0);
     }
 
+    /**
+     * Find project by name
+     */
+    public Uni<Project> findByName(String name) {
+        return find("name", name).firstResult();
+    }
+
+    /**
+     * Find all projects owned by a specific user
+     */
+    public Uni<List<Project>> findByOwnerId(String ownerId) {
+        return find("ownerId", ownerId).list();
+    }
+
+    /**
+     * Find projects by status
+     */
+    public Uni<List<Project>> findByStatus(ProjectStatus status) {
+        return find("status", status).list();
+    }
+
+    /**
+     * Find projects by visibility
+     */
+    public Uni<List<Project>> findByVisibility(Visibility visibility) {
+        return find("visibility", visibility).list();
+    }
+
+    /**
+     * Find projects by type
+     */
+    public Uni<List<Project>> findByType(ProjectType type) {
+        return find("type", type).list();
+    }
+
+    /**
+     * Check if a project with the given name exists, excluding a specific project ID
+     */
     public Uni<Boolean> existsByNameAndIdNot(String name, String excludeId) {
         return find("name = ?1 and id != ?2", name, excludeId).count()
                 .map(count -> count > 0);
     }
 
-    public Uni<List<Project>> findByOwnerId(String ownerId) {
-        return find("ownerId", ownerId).list();
-    }
-
+    /**
+     * Find projects where user is a member
+     */
     public Uni<List<Project>> findByMemberId(String memberId) {
-        return find("memberIds", new ObjectId(memberId)).list();
+        return find("memberIds", memberId).list();
     }
 
-    public Uni<List<Project>> findByInvitedUserId(String userId) {
-        return find("invitedUserIds", new ObjectId(userId)).list();
+    /**
+     * Find projects where user is invited
+     */
+    public Uni<List<Project>> findByInvitedUserId(String invitedUserId) {
+        return find("invitedUserIds", invitedUserId).list();
     }
 
-    public Uni<List<Project>> findByOwnerIdAndStatus(String ownerId, ProjectStatus status) {
-        return find("ownerId = ?1 and status = ?2", ownerId, status).list();
-    }
-
-    public Uni<List<Project>> findByMemberIdAndStatus(String memberId, ProjectStatus status) {
-        return find("memberIds = ?1 and status = ?2", new ObjectId(memberId), status).list();
-    }
-
-    public Uni<List<Project>> findByVisibility(Visibility visibility) {
-        return find("visibility", visibility).list();
-    }
-
-    public Uni<List<Project>> findByType(ProjectType type) {
-        return find("type", type).list();
-    }
-
-    public Uni<List<Project>> findByStatus(ProjectStatus status) {
-        return find("status", status).list();
-    }
-
+    /**
+     * Count projects by owner
+     */
     public Uni<Long> countByOwnerId(String ownerId) {
         return find("ownerId", ownerId).count();
     }
 
-    public Uni<Long> countByOwnerIdAndStatus(String ownerId, ProjectStatus status) {
-        return find("ownerId = ?1 and status = ?2", ownerId, status).count();
-    }
-
-    public Uni<Long> countByMemberId(String memberId) {
-        return find("memberIds", new ObjectId(memberId)).count();
-    }
-
-    public Uni<Long> countByMemberIdAndStatus(String memberId, ProjectStatus status) {
-        return find("memberIds = ?1 and status = ?2", new ObjectId(memberId), status).count();
-    }
-
+    /**
+     * Count projects by status
+     */
     public Uni<Long> countByStatus(ProjectStatus status) {
         return find("status", status).count();
     }
 
-    public Uni<Long> countByType(ProjectType type) {
-        return find("type", type).count();
-    }
-
-    public Uni<Long> countByVisibility(Visibility visibility) {
-        return find("visibility", visibility).count();
-    }
-
-    public Uni<Boolean> isMember(String projectId, String userId) {
-        return find("id = ?1 and memberIds = ?2", new ObjectId(projectId), new ObjectId(userId)).count()
-                .map(count -> count > 0);
-    }
-
-    public Uni<Boolean> isOwner(String projectId, String userId) {
-        return find("id = ?1 and ownerId = ?2", new ObjectId(projectId), userId).count()
-                .map(count -> count > 0);
-    }
-
-    public Uni<Boolean> isInvited(String projectId, String userId) {
-        return find("id = ?1 and invitedUserIds = ?2", new ObjectId(projectId), new ObjectId(userId)).count()
-                .map(count -> count > 0);
-    }
-
-    // Advanced search methods
-    public Uni<List<Project>> findByNameContaining(String nameFragment) {
-        return find("name like ?1", ".*" + nameFragment + ".*").list();
-    }
-
-    public Uni<List<Project>> findByDescriptionContaining(String descriptionFragment) {
-        return find("description like ?1", ".*" + descriptionFragment + ".*").list();
-    }
-
+    /**
+     * Find public projects (for discovery)
+     */
     public Uni<List<Project>> findPublicProjects() {
         return find("visibility", Visibility.PUBLIC).list();
     }
 
-    public Uni<List<Project>> findActiveProjects() {
-        return find("status != ?1", ProjectStatus.ARCHIVED).list();
+    /**
+     * Search projects with pagination and multiple filters
+     *
+     * @param name Filter by project name (partial match, case-insensitive)
+     * @param status Filter by project status
+     * @param visibility Filter by project visibility
+     * @param type Filter by project type
+     * @param ownerId Filter by owner ID
+     * @param page Page number (0-based)
+     * @param size Page size
+     * @param sortBy Field to sort by (default: "name")
+     * @param sortDirection Sort direction ("asc" or "desc", default: "asc")
+     * @return Paginated list of projects
+     */
+    public Uni<List<Project>> searchProjects(
+            String name,
+            ProjectStatus status,
+            Visibility visibility,
+            ProjectType type,
+            String ownerId,
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection) {
+
+        StringBuilder queryBuilder = new StringBuilder();
+        List<Object> parameters = new ArrayList<>();
+        int paramIndex = 1;
+
+        // Build dynamic query
+        if (name != null && !name.trim().isEmpty()) {
+            queryBuilder.append("name like ?").append(paramIndex++);
+            parameters.add(".*" + name.trim() + ".*");
+        }
+
+        if (status != null) {
+            if (!queryBuilder.isEmpty()) queryBuilder.append(" and ");
+            queryBuilder.append("status = ?").append(paramIndex++);
+            parameters.add(status);
+        }
+
+        if (visibility != null) {
+            if (!queryBuilder.isEmpty()) queryBuilder.append(" and ");
+            queryBuilder.append("visibility = ?").append(paramIndex++);
+            parameters.add(visibility);
+        }
+
+        if (type != null) {
+            if (!queryBuilder.isEmpty()) queryBuilder.append(" and ");
+            queryBuilder.append("type = ?").append(paramIndex++);
+            parameters.add(type);
+        }
+
+        if (ownerId != null && !ownerId.trim().isEmpty()) {
+            if (queryBuilder.length() > 0) queryBuilder.append(" and ");
+            queryBuilder.append("ownerId = ?").append(paramIndex++);
+            parameters.add(ownerId.trim());
+        }
+
+        // Build sort
+        Sort sort = Sort.by(sortBy != null ? sortBy : "name");
+        if ("desc".equalsIgnoreCase(sortDirection)) {
+            sort = sort.descending();
+        }
+
+        // Execute query
+        String query = queryBuilder.length() > 0 ? queryBuilder.toString() : "";
+        Object[] params = parameters.toArray();
+
+        if (query.isEmpty()) {
+            return findAll(sort).page(Page.of(page, size)).list();
+        } else {
+            return find(query, sort, params).page(Page.of(page, size)).list();
+        }
     }
 
-    // User-specific project queries
-    public Uni<List<Project>> findUserProjects(String userId) {
-        return find("ownerId = ?1 or memberIds = ?2", userId, new ObjectId(userId)).list();
+    /**
+     * Count total results for search query (for pagination metadata)
+     */
+    public Uni<Long> countSearchResults(
+            String name,
+            ProjectStatus status,
+            Visibility visibility,
+            ProjectType type,
+            String ownerId) {
+
+        StringBuilder queryBuilder = new StringBuilder();
+        List<Object> parameters = new ArrayList<>();
+        int paramIndex = 1;
+
+        // Build same query as search method
+        if (name != null && !name.trim().isEmpty()) {
+            queryBuilder.append("name like ?").append(paramIndex++);
+            parameters.add(".*" + name.trim() + ".*");
+        }
+
+        if (status != null) {
+            if (queryBuilder.length() > 0) queryBuilder.append(" and ");
+            queryBuilder.append("status = ?").append(paramIndex++);
+            parameters.add(status);
+        }
+
+        if (visibility != null) {
+            if (queryBuilder.length() > 0) queryBuilder.append(" and ");
+            queryBuilder.append("visibility = ?").append(paramIndex++);
+            parameters.add(visibility);
+        }
+
+        if (type != null) {
+            if (queryBuilder.length() > 0) queryBuilder.append(" and ");
+            queryBuilder.append("type = ?").append(paramIndex++);
+            parameters.add(type);
+        }
+
+        if (ownerId != null && !ownerId.trim().isEmpty()) {
+            if (queryBuilder.length() > 0) queryBuilder.append(" and ");
+            queryBuilder.append("ownerId = ?").append(paramIndex++);
+            parameters.add(ownerId.trim());
+        }
+
+        String query = queryBuilder.length() > 0 ? queryBuilder.toString() : "";
+        Object[] params = parameters.toArray();
+
+        if (query.isEmpty()) {
+            return count();
+        } else {
+            return find(query, params).count();
+        }
     }
 
-    public Uni<List<Project>> findUserProjectsByStatus(String userId, ProjectStatus status) {
-        return find("(ownerId = ?1 or memberIds = ?2) and status = ?3",
-                userId, new ObjectId(userId), status).list();
+    /**
+     * Find projects accessible by a user (owned, member, or public)
+     */
+    public Uni<List<Project>> findAccessibleProjects(String userId) {
+        return find("ownerId = ?1 or memberIds = ?2 or visibility = ?3",
+                userId, userId, Visibility.PUBLIC).list();
     }
+
+    /**
+     * Find recent projects by owner (last 30 days)
+     */
+    public Uni<List<Project>> findRecentProjectsByOwner(String ownerId, int limit) {
+        return find("ownerId = ?1", Sort.by("createdAt").descending(), ownerId)
+                .page(Page.ofSize(limit))
+                .list();
+    }
+
+    /**
+     * Find projects by multiple owners
+     */
+    public Uni<List<Project>> findByOwnerIds(List<String> ownerIds) {
+        return find("ownerId in ?1", ownerIds).list();
+    }
+
+    /**
+     * Get project statistics by owner
+     */
+    public Uni<ProjectStats> getProjectStatsByOwner(String ownerId) {
+        return find("ownerId", ownerId).list()
+                .map(projects -> {
+                    long totalProjects = projects.size();
+                    long activeProjects = projects.stream()
+                            .filter(p -> p.getStatus() == ProjectStatus.ACTIVE)
+                            .count();
+                    long draftProjects = projects.stream()
+                            .filter(p -> p.getStatus() == ProjectStatus.DRAFT)
+                            .count();
+                    long completedProjects = projects.stream()
+                            .filter(p -> p.getStatus() == ProjectStatus.COMPLETED)
+                            .count();
+
+                    return new ProjectStats(totalProjects, activeProjects, draftProjects, completedProjects);
+                });
+    }
+
 }

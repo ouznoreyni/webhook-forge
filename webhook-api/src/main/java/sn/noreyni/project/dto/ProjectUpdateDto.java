@@ -19,4 +19,5 @@ public record ProjectUpdateDto(
         ProjectStatus status,
 
         String avatarUrl
-) {}
+) {
+}

@@ -18,9 +18,9 @@ public record ProjectCreateDto(
         @NotNull(message = "Le type de projet est requis")
         ProjectType type,
 
-        Visibility visibility, // Optional, defaults to PRIVATE
+        Visibility visibility,
 
-        ProjectStatus status, // Optional, defaults to DRAFT
+        ProjectStatus status,
 
         String avatarUrl
 ) {}

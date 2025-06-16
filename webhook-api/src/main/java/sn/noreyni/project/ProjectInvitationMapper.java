@@ -2,24 +2,20 @@ package sn.noreyni.project;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.bson.types.ObjectId;
+
+import java.util.Collections;
+
 import org.modelmapper.ModelMapper;
-import sn.noreyni.common.enums.InvitationStatus;
-import sn.noreyni.project.dto.*;
+import sn.noreyni.project.dto.ProjectInvitationCreateDto;
+import sn.noreyni.project.dto.ProjectInvitationDetailsDto;
+import sn.noreyni.project.dto.ProjectInvitationListDto;
+import sn.noreyni.project.dto.ProjectInvitationUpdateDto;
 import sn.noreyni.user.UserMapper;
+import sn.noreyni.user.dto.UserListDto;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
-/**
- * ProjectInvitation mapper for converting between entities and DTOs
- * Uses manual mapping for records and ModelMapper for entities
- *
- * @author Noreyni Team
- * @version 1.0
- * @since 2025
- */
 @ApplicationScoped
 public class ProjectInvitationMapper {
 
@@ -27,280 +23,190 @@ public class ProjectInvitationMapper {
     ModelMapper modelMapper;
 
     @Inject
-    UserMapper userMapper;
-
-    @Inject
     ProjectMapper projectMapper;
 
-    /**
-     * Converts BulkInviteUsersDto to list of individual ProjectInviteUserDto
-     *
-     * @param bulkDto the bulk invitation DTO
-     * @return List of individual invitation DTOs
-     */
-    public List<ProjectInviteUserDto> toIndividualInvites(BulkInviteUsersDto bulkDto) {
-        if (bulkDto == null || bulkDto.emails() == null) {
-            return null;
-        }
-
-        return bulkDto.emails().stream()
-                .map(email -> new ProjectInviteUserDto(
-                        email,
-                        bulkDto.projectId(),
-                        bulkDto.expiresAt()
-                ))
-                .collect(Collectors.toList());
-    }
+    @Inject
+    UserMapper userMapper;
 
     /**
-     * Converts ProjectInvitation entity to ProjectInvitationListDto
-     * Manual mapping because records don't have no-arg constructors
-     *
-     * @param invitation the invitation entity
-     * @return ProjectInvitationListDto or null if input is null
+     * Convert ProjectInvitation entity to ProjectInvitationListDto
      */
     public ProjectInvitationListDto toListDto(ProjectInvitation invitation) {
         if (invitation == null) {
             return null;
         }
 
-        String projectName = getProjectName(invitation);
-        String inviterName = getInviterName(invitation);
-        String inviteeName = getInviteeName(invitation);
-        boolean isExpired = isExpired(invitation);
-
         return new ProjectInvitationListDto(
                 invitation.getIdAsString(),
                 invitation.getProjectId(),
-                projectName,
-                inviterName,
-                inviteeName,
-                invitation.getSentAt(),
-                invitation.getExpiresAt(),
+                invitation.getProject() != null ? invitation.getProject().getName() : null,
+                invitation.getInviterId(),
+                invitation.getInviter() != null ? userMapper.toListDto(invitation.getInviter()) : null,
                 invitation.getStatus(),
-                isExpired
+                invitation.getSentAt(),
+                invitation.getExpiresAt()
         );
     }
 
     /**
-     * Converts ProjectInvitation entity to ProjectInvitationDetailsDto
-     * Manual mapping because records don't have no-arg constructors
-     *
-     * @param invitation the invitation entity
-     * @return ProjectInvitationDetailsDto or null if input is null
+     * Convert list of ProjectInvitation entities to list of ProjectInvitationListDto
+     */
+    public List<ProjectInvitationListDto> toListDto(List<ProjectInvitation> invitations) {
+        if (invitations == null) {
+            return null;
+        }
+        return invitations.stream()
+                .map(this::toListDto)
+                .toList();
+    }
+
+    /**
+     * Convert ProjectInvitation entity to ProjectInvitationDetailsDto
+     * Note: This assumes single invitation entity but maps to the multi-invitee DTO structure
      */
     public ProjectInvitationDetailsDto toDetailsDto(ProjectInvitation invitation) {
         if (invitation == null) {
             return null;
         }
 
+        // For single invitation, wrap invitee data in lists
+        List<String> inviteeIds = invitation.getInviteeId() != null ?
+                List.of(invitation.getInviteeId()) : List.of();
+
+        List<UserListDto> invitees = invitation.getInvitee() != null ?
+                List.of(userMapper.toListDto(invitation.getInvitee())) : List.of();
+
         return new ProjectInvitationDetailsDto(
                 invitation.getIdAsString(),
-                projectMapper.toDetailsDto(invitation.getProject()),
-                userMapper.toDetailsDto(invitation.getInviter()),
-                userMapper.toDetailsDto(invitation.getInvitee()),
+                invitation.getProjectId(),
+                invitation.getProject() != null ? projectMapper.toListDto(invitation.getProject()) : null,
+                invitation.getInviterId(),
+                invitation.getInviter() != null ? userMapper.toListDto(invitation.getInviter()) : null,
+                inviteeIds,
+                invitees,
+                invitation.getStatus(),
                 invitation.getSentAt(),
                 invitation.getExpiresAt(),
-                invitation.getStatus(),
                 invitation.getCreatedAt(),
-                invitation.getUpdatedAt()
+                invitation.getUpdatedAt(),
+                invitation.getCreatedBy(),
+                invitation.getUpdatedBy()
         );
     }
 
     /**
-     * Converts ProjectInvitationCreateDto to ProjectInvitation entity
-     * Uses ModelMapper since ProjectInvitation is a regular class
-     *
-     * @param dto the creation DTO
-     * @return ProjectInvitation entity or null if input is null
+     * Convert list of ProjectInvitation entities to single ProjectInvitationDetailsDto
+     * This groups multiple invitations (for same project/inviter) into one DTO
      */
-    public ProjectInvitation toEntity(ProjectInvitationCreateDto dto) {
-        if (dto == null) {
+    public ProjectInvitationDetailsDto toGroupedDetailsDto(List<ProjectInvitation> invitations) {
+        if (invitations == null || invitations.isEmpty()) {
             return null;
         }
 
-        // ModelMapper works fine for mapping TO regular classes
-        ProjectInvitation invitation = modelMapper.map(dto, ProjectInvitation.class);
+        ProjectInvitation firstInvitation = invitations.getFirst();
 
-        // Set defaults
-        invitation.setSentAt(LocalDateTime.now());
-        invitation.setStatus(InvitationStatus.PENDING);
+        List<String> inviteeIds = invitations.stream()
+                .map(ProjectInvitation::getInviteeId)
+                .filter(Objects::nonNull)
+                .toList();
 
-        if (invitation.getExpiresAt() == null) {
-            invitation.setExpiresAt(getDefaultExpirationDate());
-        }
+        List<UserListDto> invitees = invitations.stream()
+                .map(ProjectInvitation::getInvitee)
+                .filter(Objects::nonNull)
+                .map(userMapper::toListDto)
+                .toList();
 
-        return invitation;
+        return new ProjectInvitationDetailsDto(
+                firstInvitation.getIdAsString(), // Use first invitation's ID as group ID
+                firstInvitation.getProjectId(),
+                firstInvitation.getProject() != null ? projectMapper.toListDto(firstInvitation.getProject()) : null,
+                firstInvitation.getInviterId(),
+                firstInvitation.getInviter() != null ? userMapper.toListDto(firstInvitation.getInviter())
+                        : null,
+                inviteeIds,
+                invitees,
+                firstInvitation.getStatus(), // You might want to compute a combined status
+                firstInvitation.getSentAt(),
+                firstInvitation.getExpiresAt(),
+                firstInvitation.getCreatedAt(),
+                firstInvitation.getUpdatedAt(),
+                firstInvitation.getCreatedBy(),
+                firstInvitation.getUpdatedBy()
+        );
     }
 
     /**
-     * Converts ProjectInviteUserDto to ProjectInvitation entity
-     * Uses manual mapping since we need to handle email lookup
-     *
-     * @param dto the invite user DTO
-     * @return ProjectInvitation entity or null if input is null
+     * Convert ProjectInvitationCreateDto to ProjectInvitation entity for a specific email
      */
-    public ProjectInvitation toEntity(ProjectInviteUserDto dto) {
-        if (dto == null) {
+    public ProjectInvitation toEntity(ProjectInvitationCreateDto createDto, String inviteeEmail, String inviteeId) {
+        if (createDto == null || inviteeEmail == null) {
             return null;
         }
 
         ProjectInvitation invitation = new ProjectInvitation();
-        invitation.setProjectId(dto.projectId());
-        // Note: inviteeId will be set by service after finding user by email
-        invitation.setSentAt(LocalDateTime.now());
-        invitation.setStatus(InvitationStatus.PENDING);
-        invitation.setExpiresAt(dto.expiresAt() != null ? dto.expiresAt() : getDefaultExpirationDate());
+        invitation.setProjectId(createDto.projectId());
+        invitation.setInviteeId(inviteeId);
+        invitation.setExpiresAt(createDto.expiresAt());
 
         return invitation;
     }
 
     /**
-     * Updates ProjectInvitation entity status from ProjectInvitationResponseDto
-     * Uses manual mapping to handle status update
-     *
-     * @param invitation the target invitation entity to update
-     * @param dto the response DTO with new status
+     * Convert ProjectInvitationCreateDto to list of ProjectInvitation entities
+     * Note: inviteeIds need to be resolved separately by finding users by email
      */
-    public void updateStatusFromDto(ProjectInvitation invitation, ProjectInvitationResponseDto dto) {
-        if (dto == null || invitation == null) {
+    public List<ProjectInvitation> toEntities(ProjectInvitationCreateDto createDto, List<String> inviteeIds) {
+        if (createDto == null || createDto.inviteeEmails() == null || inviteeIds == null) {
+            return Collections.emptyList();
+        }
+
+        if (createDto.inviteeEmails().size() != inviteeIds.size()) {
+            throw new IllegalArgumentException("Email list and invitee ID list must have the same size");
+        }
+
+        return inviteeIds.stream()
+                .map(inviteeId -> {
+                    ProjectInvitation invitation = new ProjectInvitation();
+                    invitation.setProjectId(createDto.projectId());
+                    invitation.setInviteeId(inviteeId);
+                    invitation.setExpiresAt(createDto.expiresAt());
+                    return invitation;
+                })
+                .toList();
+    }
+
+    /**
+     * Create individual ProjectInvitation for each email in the bulk request
+     */
+    public ProjectInvitation createInvitationForEmail(ProjectInvitationCreateDto createDto, String email, String inviteeId) {
+        if (createDto == null || email == null || inviteeId == null) {
+            return null;
+        }
+
+        ProjectInvitation invitation = new ProjectInvitation();
+        invitation.setProjectId(createDto.projectId());
+        invitation.setInviteeId(inviteeId);
+        invitation.setExpiresAt(createDto.expiresAt());
+
+        return invitation;
+    }
+
+    /**
+     * Update ProjectInvitation entity from ProjectInvitationUpdateDto
+     */
+    public void updateEntity(ProjectInvitation invitation, ProjectInvitationUpdateDto updateDto) {
+        if (invitation == null || updateDto == null) {
             return;
         }
 
-        if (dto.status() != null) {
-            invitation.setStatus(dto.status());
+        if (updateDto.status() != null) {
+            invitation.setStatus(updateDto.status());
         }
-
-        // Always update the timestamp using BaseEntity method
-        invitation.preUpdate();
-    }
-
-    /**
-     * Converts list of ProjectInvitations to list of ProjectInvitationListDto
-     *
-     * @param invitations the list of invitation entities
-     * @return List of ProjectInvitationListDto
-     */
-    public List<ProjectInvitationListDto> toListDtoList(List<ProjectInvitation> invitations) {
-        if (invitations == null) {
-            return null;
-        }
-
-        return invitations.stream()
-                .map(this::toListDto)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Converts list of ProjectInvitations to list of ProjectInvitationDetailsDto
-     *
-     * @param invitations the list of invitation entities
-     * @return List of ProjectInvitationDetailsDto
-     */
-    public List<ProjectInvitationDetailsDto> toDetailsDtoList(List<ProjectInvitation> invitations) {
-        if (invitations == null) {
-            return null;
-        }
-
-        return invitations.stream()
-                .map(this::toDetailsDto)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Creates ProjectInvitationStatsDto from individual counts
-     *
-     * @param totalInvitations total number of invitations
-     * @param pendingInvitations number of pending invitations
-     * @param acceptedInvitations number of accepted invitations
-     * @param rejectedInvitations number of rejected invitations
-     * @param expiredInvitations number of expired invitations
-     * @return ProjectInvitationStatsDto
-     */
-    public ProjectInvitationStatsDto toStatsDto(long totalInvitations, long pendingInvitations,
-                                                long acceptedInvitations, long rejectedInvitations,
-                                                long expiredInvitations) {
-        return new ProjectInvitationStatsDto(totalInvitations, pendingInvitations, acceptedInvitations,
-                rejectedInvitations, expiredInvitations);
-    }
-
-    /**
-     * Converts string ID to ObjectId with validation
-     *
-     * @param id the string ID to convert
-     * @return ObjectId or null if input is null/empty
-     * @throws IllegalArgumentException if ID format is invalid
-     */
-    public ObjectId toObjectId(String id) {
-        if (id == null || id.trim().isEmpty()) {
-            return null;
-        }
-
-        try {
-            return new ObjectId(id);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid ObjectId format: " + id, e);
+        if (updateDto.expiresAt() != null) {
+            invitation.setExpiresAt(updateDto.expiresAt());
         }
     }
 
-    /**
-     * Converts ObjectId to String safely
-     *
-     * @param objectId the ObjectId to convert
-     * @return String representation or null if input is null
-     */
-    public String toStringId(ObjectId objectId) {
-        return objectId != null ? objectId.toString() : null;
-    }
 
-    /**
-     * Validates if a string is a valid ObjectId format
-     *
-     * @param id the string to validate
-     * @return true if valid ObjectId format, false otherwise
-     */
-    public boolean isValidObjectId(String id) {
-        if (id == null || id.trim().isEmpty()) {
-            return false;
-        }
-
-        try {
-            new ObjectId(id);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
-
-    // Helper methods
-    private String getProjectName(ProjectInvitation invitation) {
-        if (invitation.getProject() != null) {
-            return invitation.getProject().getName();
-        }
-        return "Projet inconnu";
-    }
-
-    private String getInviterName(ProjectInvitation invitation) {
-        if (invitation.getInviter() != null) {
-            return invitation.getInviter().getFirstName() + " " + invitation.getInviter().getLastName();
-        }
-        return "Utilisateur inconnu";
-    }
-
-    private String getInviteeName(ProjectInvitation invitation) {
-        if (invitation.getInvitee() != null) {
-            return invitation.getInvitee().getFirstName() + " " + invitation.getInvitee().getLastName();
-        }
-        return "Utilisateur inconnu";
-    }
-
-    private boolean isExpired(ProjectInvitation invitation) {
-        return invitation.getExpiresAt() != null &&
-                invitation.getExpiresAt().isBefore(LocalDateTime.now()) &&
-                invitation.getStatus() == InvitationStatus.PENDING;
-    }
-
-    private LocalDateTime getDefaultExpirationDate() {
-        return LocalDateTime.now().plusDays(7); // 7 days expiration by default
-    }
 }
+

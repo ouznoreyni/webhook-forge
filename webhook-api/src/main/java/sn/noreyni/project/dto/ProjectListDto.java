@@ -14,9 +14,10 @@ public record ProjectListDto(
         Visibility visibility,
         ProjectType type,
         String avatarUrl,
-        String ownerName,
+        String ownerId,
+        String ownerFirstName,
+        String ownerLastName,
         int memberCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
-) {
-}
+) {}
